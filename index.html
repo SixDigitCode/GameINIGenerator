@@ -2,6 +2,7 @@
 <html>
 
 <head>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <style>
         body {
             font-family: Roboto, Arial, Helvetica, sans-serif;
@@ -66,7 +67,7 @@
                     // console.log(settings[j]);
                     if (enabled) {
                         var inputelem = settings[j].querySelector("input.option") || settings[j].querySelector("select.option");
-                        var value = (inputelem.value == "on" ? inputelem.checked : inputelem.value);
+                        var value = (inputelem.value == "on" ? (inputelem.checked ? "True" : "False") : inputelem.value);
                         console.log(sections[i].dataset.tag + " " + value);
 
                         sectionHasSettings = true;
@@ -81,11 +82,80 @@
             document.getElementById("result").value = finalText;
 
         }
-        window.onload = generateINI;
+
+        function importINI() {
+            var iniLines = document.getElementById("result").value.split("\n");
+
+            var allStatusBoxes = document.querySelectorAll(".enabledstatus");
+            for (var i = 0; i < allStatusBoxes.length; i++) {
+                allStatusBoxes[i].checked = false;
+            }
+
+
+            for (var i = 0; i < iniLines.length; i++) {
+                if (iniLines[i].trim() == "" || iniLines[i].startsWith("#") || iniLines[i].startsWith("[")) {
+                    continue; //Skip this line if it isn't a setting (i.e. empty/comment/section header)
+                }
+
+                var settingParts = iniLines[i].match(/^([\w\d]+)\s*=\s*([\w\d\.]+)/);
+                //settingparts[1] = setting name, settingparts[2] = value
+
+                if (settingParts[1] == null) {
+                    continue;
+                }
+
+                var parentElem = document.querySelector(".option[data-tag=" + settingParts[1] + "]");
+                if (parentElem == null) {
+                    console.log("Skipping due to null selector");
+                    continue;
+                }
+
+                parentElem.querySelector(".enabledstatus").checked = true;
+                console.log("Set checked to true");
+
+                var valueBox = parentElem.querySelector(".option");
+
+                if (valueBox.type == "checkbox") {
+                    valueBox.checked = (settingParts[2].toLowerCase() == "true");
+                } else {
+                    valueBox.value = settingParts[2];
+                }
+            }
+        }
+        window.onload = function() {
+            generateINI();
+
+            var inputElements = document.querySelectorAll("input, select");
+            for (var i = 0; i < inputElements.length; i++) {
+                inputElements[i].onchange = generateINI;
+                //Whenever an input element is changed the INI is regenerated
+            }
+
+        };
     </script>
 </head>
 
 <body>
+    <!--TODO: Maybe add controller profile support and others from the forum
+    post at https://forums.dolphin-emu.org/Thread-unofficial-howto-using-gameini-settings-per-game
+
+    Choosing Control Profiles per game:
+First you should have a control profile saved for each gamecube controller or Wiimote. For example lets say you have created Wiimote profiles named "Sideways1" up to "Sideways4"  for Wii games that use the sideways wiimote handling(donkey kong, kirby games, etc.). In order to load those profiles per game you should put:
+[Controls]
+WiimoteProfile1 = Sideways1 => You can put any profile name you want to put here instead. This loads wiimote profile for player 1.
+WiimoteProfile2 = Sideways2 => You can put any profile name you want to put here instead. This loads wiimote profile for player 2.
+WiimoteProfile3 = Sideways3 => You can put any profile name you want to put here instead. This loads wiimote profile for player 3.
+WiimoteProfile4 = Sideways4 => You can put any profile name you want to put here instead. This loads wiimote profile for player 4.
+
+For gamecube controller profiles you should put:
+[Controls]
+PadProfile1 = Your profile name here. This loads gcpad profile for player 1.
+PadProfile2 = Your profile name here. This loads gcpad profile for player 2.
+PadProfile3 = Your profile name here. This loads gcpad profile for player 3.
+PadProfile4 = Your profile name here. This loads gcpad profile for player 4.
+
+-->
+
     <div class="section" data-tag="[Core]">
         <h3>Core</h3>
 
@@ -208,7 +278,7 @@
             <input type="checkbox" class="enabledstatus">
             <label>
                 <input type="checkbox" class="option">
-                <span>Memory Management Unit (MMU)</span>
+                <span>Progressive Scan</span>
             </label>
         </div>
 
@@ -258,6 +328,14 @@
                     <option value="2">Asynchronous (Ubershaders)</option>
                     <option value="3">Asynchronous (Skip Drawing)</option>
                 </select>
+            </label>
+        </div>
+
+        <div class="option" data-tag="PAL60">
+            <input type="checkbox" class="enabledstatus">
+            <label>
+                <input type="checkbox" class="option">
+                <span>Use PAL60 (EuRGB60) mode</span>
             </label>
         </div>
 
@@ -509,7 +587,7 @@
             <input type="checkbox" class="enabledstatus">
             <label>
                 <input type="checkbox" class="option">
-                <span>Skip EFB Access From CPU</span>
+                <span>Don't skip EFB Access From CPU</span>
             </label>
         </div>
 
@@ -722,11 +800,202 @@
 
 
     </div>
+    <div class="section" data-tag="[Controls]">
+        <h3>Controls</h3>
 
+        <div class="option" data-tag="PadType0">
+            <input type="checkbox" class="enabledstatus">
+            <label>
+                <span>GameCube Port 1: </span>
+                <select class="option">
+                    <option value="0">None</option>
+                    <option value="5">GBA</option>
+                    <option value="6">Standard Controller</option>
+                    <option value="7">Keyboard</option>
+                    <option value="8">Steering Wheel</option>
+                    <option value="9">Dance Mat</option>
+                    <option value="10">TaruKonga Bongos</option>
+                    <option value="11">AM Baseboard</option>
+                </select>
+            </label>
+        </div>
+
+        <div class="option" data-tag="PadProfile1">
+            <input type="checkbox" class="enabledstatus">
+            <label>
+                <span>GameCube Profile 1: </span>
+                <input type="text" class="option" placeholder="Your profile name here">
+            </label>
+        </div>
+        <!-- TODO: Add import option -->
+
+        <div class="option" data-tag="PadType1">
+            <input type="checkbox" class="enabledstatus">
+            <label>
+                <span>GameCube Port 2: </span>
+                <select class="option">
+                    <option value="0">None</option>
+                    <option value="5">GBA</option>
+                    <option value="6">Standard Controller</option>
+                    <option value="7">Keyboard</option>
+                    <option value="8">Steering Wheel</option>
+                    <option value="9">Dance Mat</option>
+                    <option value="10">TaruKonga Bongos</option>
+                    <option value="11">AM Baseboard</option>
+                </select>
+            </label>
+        </div>
+
+        <div class="option" data-tag="PadProfile2">
+            <input type="checkbox" class="enabledstatus">
+            <label>
+                <span>GameCube Profile 2: </span>
+                <input type="text" class="option" placeholder="Your profile name here">
+            </label>
+        </div>
+
+        <div class="option" data-tag="PadType2">
+            <input type="checkbox" class="enabledstatus">
+            <label>
+                <span>GameCube Port 3: </span>
+                <select class="option">
+                    <option value="0">None</option>
+                    <option value="5">GBA</option>
+                    <option value="6">Standard Controller</option>
+                    <option value="7">Keyboard</option>
+                    <option value="8">Steering Wheel</option>
+                    <option value="9">Dance Mat</option>
+                    <option value="10">TaruKonga Bongos</option>
+                    <option value="11">AM Baseboard</option>
+                </select>
+            </label>
+        </div>
+
+        <div class="option" data-tag="PadProfile3">
+            <input type="checkbox" class="enabledstatus">
+            <label>
+                <span>GameCube Profile 3: </span>
+                <input type="text" class="option" placeholder="Your profile name here">
+            </label>
+        </div>
+
+        <div class="option" data-tag="PadType3">
+            <input type="checkbox" class="enabledstatus">
+            <label>
+                <span>GameCube Port 4: </span>
+                <select class="option">
+                    <option value="0">None</option>
+                    <option value="5">GBA</option>
+                    <option value="6">Standard Controller</option>
+                    <option value="7">Keyboard</option>
+                    <option value="8">Steering Wheel</option>
+                    <option value="9">Dance Mat</option>
+                    <option value="10">TaruKonga Bongos</option>
+                    <option value="11">AM Baseboard</option>
+                </select>
+            </label>
+        </div>
+
+        <div class="option" data-tag="PadProfile4">
+            <input type="checkbox" class="enabledstatus">
+            <label>
+                <span>GameCube Profile 4: </span>
+                <input type="text" class="option" placeholder="Your profile name here">
+            </label>
+        </div>
+
+
+        <!-- TODO: Auto-update when element is changed -->
+
+
+
+
+        <div class="option" data-tag="WiimoteSource0">
+            <input type="checkbox" class="enabledstatus">
+            <label>
+                <span>Wiimote 1 source: </span>
+                <select class="option">
+                    <option value="0">None</option>
+                    <option value="1">Emulated Wiimote</option>
+                    <option value="2">Real Wiimote</option>
+                </select>
+            </label>
+        </div>
+
+        <div class="option" data-tag="WiimoteProfile1">
+            <input type="checkbox" class="enabledstatus">
+            <label>
+                <span>Wiimote Profile 1: </span>
+                <input type="text" class="option" placeholder="Your profile name here">
+            </label>
+        </div>
+
+
+        <div class="option" data-tag="WiimoteSource1">
+            <input type="checkbox" class="enabledstatus">
+            <label>
+                <span>Wiimote 2 source: </span>
+                <select class="option">
+                    <option value="0">None</option>
+                    <option value="1">Emulated Wiimote</option>
+                    <option value="2">Real Wiimote</option>
+                </select>
+            </label>
+        </div>
+
+        <div class="option" data-tag="WiimoteProfile2">
+            <input type="checkbox" class="enabledstatus">
+            <label>
+                <span>Wiimote Profile 2: </span>
+                <input type="text" class="option" placeholder="Your profile name here">
+            </label>
+        </div>
+
+        <div class="option" data-tag="WiimoteSource2">
+            <input type="checkbox" class="enabledstatus">
+            <label>
+                <span>Wiimote 3 source: </span>
+                <select class="option">
+                    <option value="0">None</option>
+                    <option value="1">Emulated Wiimote</option>
+                    <option value="2">Real Wiimote</option>
+                </select>
+            </label>
+        </div>
+
+        <div class="option" data-tag="WiimoteProfile3">
+            <input type="checkbox" class="enabledstatus">
+            <label>
+                <span>Wiimote Profile 3: </span>
+                <input type="text" class="option" placeholder="Your profile name here">
+            </label>
+        </div>
+
+        <div class="option" data-tag="WiimoteSource3">
+            <input type="checkbox" class="enabledstatus">
+            <label>
+                <span>Wiimote 4 source: </span>
+                <select class="option">
+                    <option value="0">None</option>
+                    <option value="1">Emulated Wiimote</option>
+                    <option value="2">Real Wiimote</option>
+                </select>
+            </label>
+        </div>
+
+        <div class="option" data-tag="WiimoteProfile4">
+            <input type="checkbox" class="enabledstatus">
+            <label>
+                <span>Wiimote Profile 4: </span>
+                <input type="text" class="option" placeholder="Your profile name here">
+            </label>
+        </div>
+    </div>
 
 
     <div class="output">
         <input type="button" id="generate" value="Generate INI" onclick="generateINI()">
+        <input type="button" id="generate" value="Import INI" onclick="importINI()">
         <textarea id="result"></textarea>
     </div>
 
